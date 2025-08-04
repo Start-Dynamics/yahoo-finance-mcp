@@ -49,6 +49,7 @@ Available tools:
 - get_option_chain: Fetch the option chain for a given ticker symbol, expiration date, and option type.
 - get_recommendations: Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
 """,
+    port=8002,
 )
 
 
@@ -414,4 +415,4 @@ async def get_recommendations(ticker: str, recommendation_type: str, months_back
 if __name__ == "__main__":
     # Initialize and run the server
     print("Starting Yahoo Finance MCP server...")
-    yfinance_server.run(transport="stdio")
+    yfinance_server.run(transport="sse")
