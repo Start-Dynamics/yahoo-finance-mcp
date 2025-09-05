@@ -1,0 +1,46 @@
+name: 'CICD Workflow'
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+permissions: write-all
+
+env:
+  aws-account: 535002885699
+  region: me-south-1
+  role-to-assume: arn:aws:iam::535002885699:role/gha-oidc-role
+  role-session-name: ghactions
+  repository: yahoo-finance-mcp
+
+jobs:
+  cicd:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v4.0.2
+      with:
+        role-to-assume: ${{ env.role-to-assume }}
+        role-session-name: ${{ env.role-session-name }}
+        aws-region: ${{ env.region }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      shell: bash
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ env.repository }}
+        IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
