@@ -1,4 +1,5 @@
 name: 'CICD Workflow'
+
 on:
   push:
     branches:
@@ -19,28 +20,31 @@ jobs:
   cicd:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Configure aws credentials
-      uses: aws-actions/configure-aws-credentials@v4.0.2
-      with:
-        role-to-assume: ${{ env.role-to-assume }}
-        role-session-name: ${{ env.role-session-name }}
-        aws-region: ${{ env.region }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.role-to-assume }}
+          role-session-name: ${{ env.role-session-name }}
+          aws-region: ${{ env.region }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      shell: bash
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ env.repository }}
-        IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.repository }}
+          IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # Example of consuming the image output later
+      - name: Use built image
+        run: echo "Built image is ${{ steps.build-image.outputs.image }}"
