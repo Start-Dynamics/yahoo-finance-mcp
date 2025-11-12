@@ -14,7 +14,7 @@ env:
   region: me-south-1
   role-to-assume: arn:aws:iam::535002885699:role/gha-oidc-role
   role-session-name: ghactions
-  repository: yahoo-finance-mcp
+  repository: startfinance-v2-dev-yahoo-finance-mcp-ecr
 
 jobs:
   cicd:
