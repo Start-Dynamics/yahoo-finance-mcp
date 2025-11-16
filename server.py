@@ -415,8 +415,9 @@ if __name__ == "__main__":
     # Initialize and run the server
     print("Starting Yahoo Finance MCP server...")
     # FastMCP 2.x handles timeouts internally via uvicorn configuration
+    import os
     yfinance_server.run(
-        transport="sse",
-        host="0.0.0.0",
-        port=8002
+        transport=os.getenv("MCP_SERVER_TRANSPORT", "streamable-http"),
+        host=os.getenv("MCP_SERVER_HOST", "0.0.0.0"),
+        port=int(os.getenv("MCP_SERVER_PORT", "8002"))
     )
