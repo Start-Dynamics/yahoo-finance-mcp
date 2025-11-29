@@ -33,6 +33,7 @@ class RecommendationType(str, Enum):
 # Initialize FastMCP server
 yfinance_server = FastMCP(
     "yfinance",
+    stateless_http=True,  # Enable stateless mode for horizontal scaling
     instructions="""
 # Yahoo Finance MCP Server
 
@@ -417,7 +418,7 @@ if __name__ == "__main__":
     # FastMCP 2.x handles timeouts internally via uvicorn configuration
     import os
     yfinance_server.run(
-        transport=os.getenv("MCP_SERVER_TRANSPORT", "streamable-http"),
+        transport="streamable-http",
         host=os.getenv("MCP_SERVER_HOST", "0.0.0.0"),
         port=int(os.getenv("MCP_SERVER_PORT", "8002"))
     )
