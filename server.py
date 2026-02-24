@@ -417,8 +417,26 @@ if __name__ == "__main__":
     print("Starting Yahoo Finance MCP server...")
     # FastMCP 2.x handles timeouts internally via uvicorn configuration
     import os
+    host = os.environ.get("MCP_SERVER_HOST")
+    port_raw = os.environ.get("MCP_SERVER_PORT")
+    transport = os.environ.get("MCP_SERVER_TRANSPORT")
+
+    if not host:
+        raise RuntimeError("Missing required environment variable: MCP_SERVER_HOST")
+    if not port_raw:
+        raise RuntimeError("Missing required environment variable: MCP_SERVER_PORT")
+    if not transport:
+        raise RuntimeError("Missing required environment variable: MCP_SERVER_TRANSPORT")
+
+    try:
+        port = int(port_raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            "Invalid MCP_SERVER_PORT: expected an integer value"
+        ) from exc
+
     yfinance_server.run(
-        transport="streamable-http",
-        host=os.getenv("MCP_SERVER_HOST", "0.0.0.0"),
-        port=int(os.getenv("MCP_SERVER_PORT", "8002"))
+        transport=transport,
+        host=host,
+        port=port,
     )
