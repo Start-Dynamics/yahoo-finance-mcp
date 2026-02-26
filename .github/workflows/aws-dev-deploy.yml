@@ -75,21 +75,23 @@ jobs:
         env:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          DEPLOY_PATH: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
+          DEPLOY_ROOT: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
         run: |
-          ssh "$EC2_USER@$EC2_HOST" "mkdir -p '$DEPLOY_PATH'"
-          scp docker-compose.aws-dev.yml "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/docker-compose.aws-dev.yml"
-          scp .env.aws-dev "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/.env.aws-dev"
+          SERVICE_PATH="${DEPLOY_ROOT%/}/mcp-yahoo"
+          ssh "$EC2_USER@$EC2_HOST" "mkdir -p '$SERVICE_PATH'"
+          scp docker-compose.aws-dev.yml "$EC2_USER@$EC2_HOST:$SERVICE_PATH/docker-compose.aws-dev.yml"
+          scp .env.aws-dev "$EC2_USER@$EC2_HOST:$SERVICE_PATH/.env.aws-dev"
 
       - name: Deploy on EC2
         env:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          DEPLOY_PATH: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
+          DEPLOY_ROOT: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
         run: |
+          SERVICE_PATH="${DEPLOY_ROOT%/}/mcp-yahoo"
           ssh "$EC2_USER@$EC2_HOST" "set -euo pipefail; \
             docker network inspect starterp-shared >/dev/null 2>&1 || docker network create starterp-shared; \
-            cd '$DEPLOY_PATH'; \
+            cd '$SERVICE_PATH'; \
             ECR_REGISTRY=\$(grep '^ECR_REGISTRY=' .env.aws-dev | cut -d= -f2-); \
             aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin \"\$ECR_REGISTRY\"; \
             docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev pull; \
