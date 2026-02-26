@@ -1,0 +1,95 @@
+name: AWS Dev Deploy (Yahoo MCP)
+
+on:
+  push:
+    branches:
+      - aws-dev
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: me-south-1
+  ROLE_TO_ASSUME: arn:aws:iam::535002885699:role/gha-oidc-role
+  ECR_REPOSITORY: startfinance-v2-dev-yahoo-finance-mcp-ecr
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    outputs:
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: meta
+        run: echo "image_tag=aws-dev-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+        run: |
+          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker tag "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_REGISTRY/$ECR_REPOSITORY:aws-dev"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:aws-dev"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare runtime env file
+        run: |
+          printf '%s\n' "${{ secrets.AWS_DEV_YAHOO_MCP_ENV_FILE }}" > .env.aws-dev
+          echo "ECR_REGISTRY=${{ needs.build_and_push.outputs.ecr_registry }}" >> .env.aws-dev
+          echo "IMAGE_TAG=${{ needs.build_and_push.outputs.image_tag }}" >> .env.aws-dev
+
+      - name: Setup SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload compose artifacts
+        env:
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DEPLOY_PATH: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
+        run: |
+          ssh "$EC2_USER@$EC2_HOST" "mkdir -p '$DEPLOY_PATH'"
+          scp docker-compose.aws-dev.yml "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/docker-compose.aws-dev.yml"
+          scp .env.aws-dev "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/.env.aws-dev"
+
+      - name: Deploy on EC2
+        env:
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DEPLOY_PATH: ${{ secrets.EC2_YAHOO_MCP_DEPLOY_PATH }}
+        run: |
+          ssh "$EC2_USER@$EC2_HOST" "set -euo pipefail; \
+            docker network inspect starterp-shared >/dev/null 2>&1 || docker network create starterp-shared; \
+            cd '$DEPLOY_PATH'; \
+            docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev pull; \
+            docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev up -d --remove-orphans; \
+            docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev ps"
