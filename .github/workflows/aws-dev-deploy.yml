@@ -90,6 +90,8 @@ jobs:
           ssh "$EC2_USER@$EC2_HOST" "set -euo pipefail; \
             docker network inspect starterp-shared >/dev/null 2>&1 || docker network create starterp-shared; \
             cd '$DEPLOY_PATH'; \
+            ECR_REGISTRY=\$(grep '^ECR_REGISTRY=' .env.aws-dev | cut -d= -f2-); \
+            aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin \"\$ECR_REGISTRY\"; \
             docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev pull; \
             docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev up -d --remove-orphans; \
             docker compose -f docker-compose.aws-dev.yml --env-file .env.aws-dev ps"
