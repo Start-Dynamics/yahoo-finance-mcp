@@ -1,8 +1,8 @@
-name: yahoo-finance-mcp-aws-dev
+name: finance-mcp-yahoo
 
 services:
   yahfinance:
-    image: ${DOCKERHUB_NAMESPACE}/startfinance-v2-dev-yahoo-finance-mcp:${IMAGE_TAG}
+    image: ${DOCKERHUB_NAMESPACE}/finance-mcp-yahoo:${IMAGE_TAG}
     restart: unless-stopped
     env_file:
       - .env.aws-dev

@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  DOCKER_REPOSITORY: startfinance-v2-dev-yahoo-finance-mcp
+  DOCKER_REPOSITORY: finance-mcp-yahoo
 
 jobs:
   build_and_push:
