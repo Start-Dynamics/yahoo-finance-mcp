@@ -3,6 +3,7 @@ name: finance-mcp-yahoo
 services:
   yahfinance:
     image: ${DOCKERHUB_NAMESPACE}/finance-mcp-yahoo:${IMAGE_TAG}
+    container_name: finance-mcp-yahoo
     restart: unless-stopped
     env_file:
       - .env.aws-dev
