@@ -1,4 +1,4 @@
-name: finance-mcp-yahoo
+name: yahoo-finance-mcp-aws-dev
 
 services:
   yahfinance:
