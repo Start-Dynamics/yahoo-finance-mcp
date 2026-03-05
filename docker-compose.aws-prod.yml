@@ -1,0 +1,18 @@
+name: yahoo-finance-mcp-aws-prod
+
+services:
+  yahfinance:
+    image: ${DOCKERHUB_NAMESPACE}/finance-mcp-yahoo:${IMAGE_TAG}
+    container_name: finance-mcp-yahoo
+    restart: unless-stopped
+    env_file:
+      - .env.aws-prod
+    networks:
+      starterp-shared:
+        aliases:
+          - yahfinance
+
+networks:
+  starterp-shared:
+    external: true
+    name: starterp-shared
